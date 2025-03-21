@@ -1,0 +1,96 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
+import { BaseEntity } from './base.entity'
+import * as bcrypt from 'bcryptjs'
+
+@Schema({
+  timestamps: true,
+  collectionOptions: {
+    changeStreamPreAndPostImages: { enabled: true },
+  },
+  _id: false,
+})
+export class User extends BaseEntity {
+  @Prop({
+    type: String,
+  })
+  firstName: string
+
+  @Prop({
+    type: String,
+  })
+  lastName: string
+
+  @Prop({
+    type: String,
+  })
+  fullName: string
+
+  @Prop({
+    type: Date,
+  })
+  dob: Date
+
+  @Prop({
+    type: String,
+    required: true,
+  })
+  email: string
+
+  @Prop({
+    type: String,
+  })
+  address: string
+
+  @Prop({
+    type: String,
+  })
+  password: string
+
+  @Prop({
+    type: Number,
+    default: 0,
+  })
+  score: number
+}
+export const UserSchema = SchemaFactory.createForClass(User)
+export type UserDocument = User & Document
+
+UserSchema.index({ email: 1 }, { unique: true, background: true })
+
+UserSchema.pre('save', async function (next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12)
+  }
+  next()
+})
+
+UserSchema.pre(['updateOne', 'updateMany', 'findOneAndUpdate'], async function (next) {
+  const update = this.getUpdate() as any
+
+  if (update.password) {
+    update.password = await bcrypt.hash(update.password, 12)
+  }
+
+  next()
+})
+
+UserSchema.pre('save', function (next) {
+  if (this.isModified('firstName') || this.isModified('lastName')) {
+    this.fullName = `${this.firstName} ${this.lastName}`
+  }
+  next()
+})
+
+UserSchema.pre(['updateOne', 'updateMany', 'findOneAndUpdate'], async function (next) {
+  const update = this.getUpdate() as any
+  const query = this.getQuery()
+  const currentUser = await this.model.findById(query?._id)
+
+  if (update.firstName || update.lastName) {
+    const firstName = update.firstName || currentUser?.firstName
+    const lastName = update.lastName || currentUser?.lastName
+    update.fullName = `${firstName ?? ''} ${lastName ?? ''}`.trim()
+  }
+
+  next()
+})
