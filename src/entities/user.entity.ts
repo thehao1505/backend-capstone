@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { BaseEntity } from './base.entity'
 import * as bcrypt from 'bcryptjs'
-
 @Schema({
   timestamps: true,
   collectionOptions: {
@@ -47,10 +46,22 @@ export class User extends BaseEntity {
   password: string
 
   @Prop({
-    type: Number,
-    default: 0,
+    type: Date,
+    default: null,
   })
-  score: number
+  passwordChangeAt: Date
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  passwordResetToken: string
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  passwordResetExpires: Date
 }
 export const UserSchema = SchemaFactory.createForClass(User)
 export type UserDocument = User & Document

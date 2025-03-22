@@ -1,7 +1,7 @@
-import { Body, Controller, Post } from '@nestjs/common'
+import { Body, Controller, Post, Patch, Param } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 import { AuthService } from './auth.service'
-import { AuthDto } from '@dtos/auth.dto'
+import { AuthDto, ChangePasswordDto, ResetPasswordDto, ForgotPasswordDto } from '@dtos/auth.dto'
 
 @Controller()
 @ApiTags('Auth')
@@ -16,5 +16,20 @@ export class AuthController {
   @Post('register')
   async register(@Body() authDto: AuthDto) {
     return this.authService.register(authDto)
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email)
+  }
+
+  @Patch('reset-password/:token')
+  async resetPassword(@Param('token') token: string, @Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto, token)
+  }
+
+  @Patch('change-password/:id')
+  async changePassword(@Param('id') id: string, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(id, changePasswordDto)
   }
 }

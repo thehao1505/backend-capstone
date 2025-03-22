@@ -1,10 +1,11 @@
 import { User, UserSchema } from '@entities'
-import { Module } from '@nestjs/common'
+import { Module, forwardRef } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 import { AuthController } from './auth.controller'
 import { AuthService } from '@modules/index-service'
 import { JwtModule } from '@nestjs/jwt'
 import { JwtStrategy } from '../../strategy'
+import { MailModule } from '@modules/index'
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { JwtStrategy } from '../../strategy'
         schema: UserSchema,
       },
     ]),
+    forwardRef(() => MailModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

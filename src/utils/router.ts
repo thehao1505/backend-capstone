@@ -1,4 +1,4 @@
-import { AuthModule, UserModule } from '@modules'
+import { AuthModule, UserModule, PostModule } from '@modules'
 import { Routes } from '@nestjs/core'
 
 export const routes: Routes = [
@@ -7,6 +7,7 @@ export const routes: Routes = [
     children: [
       { path: '/auth', module: AuthModule },
       { path: '/users', module: UserModule },
+      { path: '/posts', module: PostModule },
     ],
   },
 ]
