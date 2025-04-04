@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { User } from '@entities'
@@ -28,8 +28,60 @@ export class UserService {
     return await this.userModel.findByIdAndDelete(id)
   }
 
-  async doSomeTask(id: string, score: number) {
-    await this.userModel.findByIdAndUpdate(id, { $inc: { score: score } }, { new: true })
-    return await this.userModel.find().limit(10).sort({ score: 1 }).lean()
+  async followUser(userId: string, followingId: string) {
+    try {
+      if (userId === followingId) {
+        throw new BadRequestException('Can not do this action')
+      }
+      const user = await this.userModel.findById(userId)
+      if (user.followings.includes(followingId)) {
+        throw new BadRequestException('User is already following this user')
+      }
+      user.followings.push(followingId)
+      const following = await this.userModel.findById(followingId)
+      following.followers.push(userId)
+      await Promise.all([user.save(), following.save()])
+      return { message: 'Followed successfully' }
+    } catch (error) {
+      throw new BadRequestException('Can not follow this user')
+    }
+  }
+
+  async unFollowUser(userId: string, followingId: string) {
+    try {
+      if (userId === followingId) {
+        throw new BadRequestException('Can not do this action')
+      }
+      const user = await this.userModel.findById(userId)
+      if (!user.followings.includes(followingId)) {
+        throw new BadRequestException('User is not following this user')
+      }
+      user.followings = user.followings.filter(id => id.toString() !== followingId)
+      const following = await this.userModel.findById(followingId)
+      following.followers = following.followers.filter(id => id.toString() !== userId)
+      await Promise.all([user.save(), following.save()])
+      return { message: 'Unfollowed successfully' }
+    } catch (error) {
+      throw new BadRequestException('Can not unfollow this user')
+    }
+  }
+
+  async removeFollower(userId: string, followerId: string) {
+    try {
+      if (userId === followerId) {
+        throw new BadRequestException('Can not do this action')
+      }
+      const user = await this.userModel.findById(userId)
+      if (!user.followers.includes(followerId)) {
+        throw new BadRequestException('User is not following this user')
+      }
+      user.followers = user.followers.filter(id => id.toString() !== followerId)
+      const follower = await this.userModel.findById(followerId)
+      follower.followings = follower.followings.filter(id => id.toString() !== userId)
+      await Promise.all([user.save(), follower.save()])
+      return { message: 'Removed follower successfully' }
+    } catch (error) {
+      throw new BadRequestException('Can not remove follow this user')
+    }
   }
 }

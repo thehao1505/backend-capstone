@@ -1,11 +1,23 @@
-import { Module } from '@nestjs/common'
+import { Module, forwardRef } from '@nestjs/common'
 import { PostController } from './post.controller'
 import { PostService } from '@modules/index-service'
+import { Post, PostSchema } from '@entities'
+import { MongooseModule } from '@nestjs/mongoose'
+import { UploadModule, UserModule } from '@modules/index'
 
 @Module({
-  imports: [],
+  imports: [
+    MongooseModule.forFeature([
+      {
+        name: Post.name,
+        schema: PostSchema,
+      },
+    ]),
+    forwardRef(() => UploadModule),
+    forwardRef(() => UserModule),
+  ],
   controllers: [PostController],
-  providers: [PostService, PostService],
+  providers: [PostService],
   exports: [PostService],
 })
 export class PostModule {}

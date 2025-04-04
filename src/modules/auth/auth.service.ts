@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
-import { AuthDto, ResetPasswordDto, ChangePasswordDto } from '@dtos/auth.dto'
+import { AuthDto, ResetPasswordDto, ChangePasswordDto, RegisterDto } from '@dtos/auth.dto'
 import { configs } from '@utils/configs'
 import * as crypto from 'crypto'
 import { MailService } from '@modules/index-service'
@@ -17,30 +17,44 @@ export class AuthService {
     private readonly mailService: MailService,
   ) {}
 
-  async register(authDto: AuthDto) {
-    try {
-      const user = await this.userModel.create(authDto)
-      delete user.password
+  async register(registerDto: RegisterDto) {
+    if (!registerDto.username && !registerDto.email) throw new ForbiddenException('Username or email is required!')
 
-      return await this.signJwtToken(user._id, user.email)
-    } catch (error) {
-      console.log(error)
+    const existingUser = await this.userModel.findOne({ email: registerDto.email }).lean()
+    if (existingUser) throw new ForbiddenException('Email already exists!')
+
+    const user = (await this.userModel.create(registerDto)).toObject()
+    delete user.password
+
+    const { _id, avatar, email, fullName, username } = user
+    const token = await this.signJwtToken(user._id, email)
+
+    return {
+      user: { _id, avatar, email, fullName, username },
+      token,
     }
   }
 
   async login(authDto: AuthDto) {
-    const user = await this.userModel.findOne({ email: authDto.email })
+    if (!authDto.username && !authDto.email) throw new ForbiddenException('Username or email is required!')
+
+    const user = await this.userModel.findOne({ $or: [{ email: authDto.email }, { username: authDto.username }] }).lean()
     if (!user) throw new ForbiddenException('User not found')
 
     const isRightPassword = await bcrypt.compare(authDto.password, user.password)
     if (!isRightPassword) throw new ForbiddenException('Wrong password!')
 
-    delete user.password
-    return await this.signJwtToken(user.id, user.email)
+    const { _id, avatar, email, fullName, username } = user
+    const token = await this.signJwtToken(user._id, email)
+
+    return {
+      user: { _id, avatar, email, fullName, username },
+      token,
+    }
   }
 
   async signJwtToken(id: string, email: string): Promise<{ accessToken: string }> {
-    const payload = { sub: id, email }
+    const payload = { _id: id, email }
     const jwtString = await this.jwtService.signAsync(payload, {
       expiresIn: '1d',
       secret: configs.jwtSecret,
@@ -62,15 +76,15 @@ export class AuthService {
       const resetUrl = `${configs.url}auth/reset-password/${resetToken}`
       return await this.mailService.sendMail(email, 'Reset Password', `${resetUrl}`)
     } catch (error) {
-      console.log(error)
+      throw new ForbiddenException('Failed to send reset password email!')
     }
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto, token: string) {
+  async resetPassword(resetPasswordDto: ResetPasswordDto, resetToken: string) {
     if (resetPasswordDto.password !== resetPasswordDto.passwordConfirm)
       throw new ForbiddenException('Password and confirm password do not match!')
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex')
     const user = await this.userModel.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
@@ -83,7 +97,13 @@ export class AuthService {
     user.passwordChangeAt = new Date()
     await user.save()
 
-    return this.signJwtToken(user._id, user.email)
+    const { _id, avatar, email, fullName, username } = user
+    const token = await this.signJwtToken(user._id, email)
+
+    return {
+      user: { _id, avatar, email, fullName, username },
+      token,
+    }
   }
 
   async changePassword(id: string, changePasswordDto: ChangePasswordDto) {
@@ -100,6 +120,12 @@ export class AuthService {
     user.passwordChangeAt = new Date()
     await user.save()
 
-    return this.signJwtToken(user._id, user.email)
+    const { _id, avatar, email, fullName, username } = user
+    const token = await this.signJwtToken(user._id, email)
+
+    return {
+      user: { _id, avatar, email, fullName, username },
+      token,
+    }
   }
 }

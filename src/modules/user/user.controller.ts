@@ -42,8 +42,18 @@ export class UserController {
     return await this.userService.deleteUser(id)
   }
 
-  @Put('/do-task/:score')
-  async doSomeTask(@Param('score') score: number, @Req() req: Request) {
-    return await this.userService.doSomeTask(req.user['sub'], score)
+  @Post(':userId/follow/:followingId')
+  async followUser(@Param('userId') userId: string, @Param('followingId') followingId: string) {
+    return await this.userService.followUser(userId, followingId)
+  }
+
+  @Post(':userId/unfollow/:followingId')
+  async unFollowUser(@Param('userId') userId: string, @Param('followingId') followingId: string) {
+    return await this.userService.unFollowUser(userId, followingId)
+  }
+
+  @Post(':userId/remove-follower/:followerId')
+  async removeFollower(@Param('userId') userId: string, @Param('followerId') followerId: string) {
+    return await this.userService.removeFollower(userId, followerId)
   }
 }

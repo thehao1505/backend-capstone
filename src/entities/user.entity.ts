@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { BaseEntity } from './base.entity'
 import * as bcrypt from 'bcryptjs'
+import { configs } from '@utils/configs'
+
 @Schema({
   timestamps: true,
   collectionOptions: {
@@ -9,6 +11,19 @@ import * as bcrypt from 'bcryptjs'
   _id: false,
 })
 export class User extends BaseEntity {
+  @Prop({
+    type: String,
+    required: true,
+    unique: true,
+  })
+  username: string
+
+  @Prop({
+    type: String,
+    default: configs.defaultAvatar,
+  })
+  avatar: string
+
   @Prop({
     type: String,
   })
@@ -32,6 +47,7 @@ export class User extends BaseEntity {
   @Prop({
     type: String,
     required: true,
+    unique: true,
   })
   email: string
 
@@ -62,6 +78,26 @@ export class User extends BaseEntity {
     default: null,
   })
   passwordResetExpires: Date
+
+  @Prop({
+    type: [String],
+    ref: 'User',
+    default: [],
+  })
+  followings: string[]
+
+  @Prop({
+    type: [String],
+    ref: 'User',
+    default: [],
+  })
+  followers: string[]
+
+  @Prop({
+    type: Boolean,
+    default: true,
+  })
+  isPublic: boolean
 }
 export const UserSchema = SchemaFactory.createForClass(User)
 export type UserDocument = User & Document
