@@ -3,7 +3,7 @@ import { PostController } from './post.controller'
 import { PostService } from '@modules/index-service'
 import { Post, PostSchema } from '@entities'
 import { MongooseModule } from '@nestjs/mongoose'
-import { UploadModule, UserModule } from '@modules/index'
+import { RedisModule, UserModule } from '@modules/index'
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { UploadModule, UserModule } from '@modules/index'
         schema: PostSchema,
       },
     ]),
-    forwardRef(() => UploadModule),
+    forwardRef(() => RedisModule),
     forwardRef(() => UserModule),
   ],
   controllers: [PostController],

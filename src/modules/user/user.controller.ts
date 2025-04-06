@@ -14,6 +14,7 @@ export class UserController {
 
   @Get('me')
   me(@Req() req: Request) {
+    console.log(req.user)
     return req.user
   }
 

@@ -15,5 +15,10 @@ export const configs = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
 
+  // Redis
+  redisHost: process.env.REDIS_HOST,
+  redisPort: process.env.REDIS_PORT,
+  redisLikesTtl: process.env.REDIS_LIKES_TTL,
+
   defaultAvatar: process.env.DEFAULT_AVATAR || 'http://res.cloudinary.com/thehao/image/upload/v1742720328/img/zu8ppzlb07gwtweuwpfq.jpg',
 }
