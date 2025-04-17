@@ -1,6 +1,13 @@
 import { config } from 'dotenv'
 
-config({ path: '.env' })
+switch (process.env.NODE_ENV) {
+  case 'development':
+    config({ path: '.env.local' })
+    break
+  default:
+    config({ path: '.env' })
+    break
+}
 
 export const configs = {
   port: process.env.PORT,

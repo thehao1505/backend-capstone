@@ -31,4 +31,14 @@ export class CommentController {
   async deleteComment(@Req() req: Request, @Body() deleteCommentDto: DeleteCommentDto) {
     return await this.commentService.deleteComment(req.user['_id'], deleteCommentDto)
   }
+
+  @Post(':id/like')
+  async likePost(@Param('id') id: string, @Req() req: Request) {
+    return await this.commentService.likeComment(id, req.user['_id'])
+  }
+
+  @Post(':id/unLike')
+  async unLikePost(@Param('id') id: string, @Req() req: Request) {
+    return await this.commentService.unLikeComment(id, req.user['_id'])
+  }
 }

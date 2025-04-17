@@ -95,6 +95,7 @@ export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect 
       client.data.userId = payload._id
       return payload._id
     } catch (err) {
+      console.log(err.message)
       throw new WsException('Unauthorized: Invalid token')
     }
   }

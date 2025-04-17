@@ -1,4 +1,4 @@
-import { BadRequestException, forwardRef, Inject } from '@nestjs/common'
+import { BadRequestException, forwardRef, Inject, NotFoundException } from '@nestjs/common'
 import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
@@ -85,11 +85,9 @@ export class CommentService {
           left: { $gt: parentComment.left },
           right: { $lt: parentComment.right },
         })
-        .select({
-          _id: 1,
-          left: 1,
-          right: 1,
-          parentId: 1,
+        .populate({
+          path: 'userId',
+          select: 'username avatar',
         })
         .sort(sort || { createdAt: -1 })
         .skip((page - 1) * limit)
@@ -166,5 +164,27 @@ export class CommentService {
     )
 
     return { message: 'Comment deleted successfully' }
+  }
+
+  async likeComment(commentId: string, userId: string) {
+    const [comment, user] = await Promise.all([this.commentModel.findById(commentId), this.userService.getUser(userId)])
+    if (!comment || !user) throw new NotFoundException('comment or user not found')
+
+    if (comment.likes.includes(userId)) {
+      throw new BadRequestException('User already liked this comment')
+    }
+    comment.likes.push(userId)
+    return await comment.save()
+  }
+
+  async unLikeComment(commentId: string, userId: string) {
+    const [comment, user] = await Promise.all([this.commentModel.findById(commentId), this.userService.getUser(userId)])
+    if (!comment || !user) throw new NotFoundException('Post or user not found')
+
+    if (!comment.likes.includes(userId)) {
+      throw new BadRequestException('User has not liked this post')
+    }
+    comment.likes = comment.likes.filter(id => id !== userId)
+    return await comment.save()
   }
 }

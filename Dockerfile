@@ -1,33 +1,21 @@
-FROM node:20.18.1-alpine AS base
+# Base image
+FROM node:22-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy package files and install dependencies first (use Docker layer caching)
 COPY package*.json ./
-RUN npm install --package-lock-only
-RUN npm ci
+RUN npm install
 
-FROM base AS builder
-# Copy the rest of the application code
+# Copy source code
 COPY . .
-# Build the application
+
+# Build NestJS project
 RUN npm run build
 
-FROM node:20.18.1-alpine AS production
-# Set working directory
-WORKDIR /app
+# Expose port (make sure app uses process.env.PORT or 8080)
+EXPOSE 8080
 
-# Copy package files for production dependencies
-COPY package*.json ./
-# Install only production dependencies
-RUN npm ci --omit=dev
-
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
-
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Define the command to run the application
+# Run the app
 CMD ["node", "dist/main"]

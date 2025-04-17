@@ -13,8 +13,8 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  async createPost(@Body() createPostDto: CreatePostDto) {
-    return this.postService.createPost(createPostDto)
+  async createPost(@Req() req: Request, @Body() createPostDto: CreatePostDto) {
+    return (await this.postService.createPost(req.user['_id'], createPostDto)).populate('author', 'username avatar')
   }
 
   @Get(':id')

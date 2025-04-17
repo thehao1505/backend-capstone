@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger'
+import { ApiPropertyOptional, PartialType } from '@nestjs/swagger'
 import { IsArray, IsOptional, IsString } from 'class-validator'
 import { Pagination } from './base.dto'
 
@@ -16,13 +16,6 @@ export class CreatePostDto {
   @IsOptional()
   @IsArray()
   images: string[]
-
-  @ApiProperty({
-    example: 'bffb6ad2-ace4-4f55-8b1a-4de8640bd131',
-  })
-  @IsOptional()
-  @IsString()
-  author: string
 }
 
 export class UpdatePostDto extends PartialType(CreatePostDto) {}

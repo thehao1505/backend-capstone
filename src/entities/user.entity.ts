@@ -98,6 +98,12 @@ export class User extends BaseEntity {
     default: true,
   })
   isPublic: boolean
+
+  @Prop({
+    type: String,
+    default: null,
+  })
+  shortDescription: string
 }
 export const UserSchema = SchemaFactory.createForClass(User)
 export type UserDocument = User & Document

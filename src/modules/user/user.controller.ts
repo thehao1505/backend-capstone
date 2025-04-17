@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Req, Post, Put, Query, UseGuards } from '@nestjs/common'
+import { Controller, Delete, Get, Param, Req, Post, Query, UseGuards } from '@nestjs/common'
 import { UserService } from './user.service'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
-import { CreateUserDto, UpdateUserDto, QueryDto } from '@dtos/user.dto'
+import { QueryDto } from '@dtos/user.dto'
 import { Request } from 'express'
 import { AuthGuard } from '@nestjs/passport'
 
@@ -14,8 +14,7 @@ export class UserController {
 
   @Get('me')
   me(@Req() req: Request) {
-    console.log(req.user)
-    return req.user
+    return this.userService.getMe(req.user['_id'])
   }
 
   @Get()
@@ -28,14 +27,9 @@ export class UserController {
     return await this.userService.getUser(id)
   }
 
-  @Post()
-  async createUser(@Body() createUserDto: CreateUserDto) {
-    return await this.userService.createUser(createUserDto)
-  }
-
-  @Put(':id')
-  async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return await this.userService.updateUser(id, updateUserDto)
+  @Get('username/:username')
+  async getUserByUsername(@Param('username') username: string) {
+    return await this.userService.getUserByUsername(username)
   }
 
   @Delete(':id')
@@ -43,18 +37,23 @@ export class UserController {
     return await this.userService.deleteUser(id)
   }
 
-  @Post(':userId/follow/:followingId')
-  async followUser(@Param('userId') userId: string, @Param('followingId') followingId: string) {
-    return await this.userService.followUser(userId, followingId)
+  @Post('follow/:followingId')
+  async followUser(@Req() req: Request, @Param('followingId') followingId: string) {
+    return await this.userService.followUser(req.user['_id'], followingId)
   }
 
-  @Post(':userId/unfollow/:followingId')
-  async unFollowUser(@Param('userId') userId: string, @Param('followingId') followingId: string) {
-    return await this.userService.unFollowUser(userId, followingId)
+  @Post('unfollow/:followingId')
+  async unFollowUser(@Req() req: Request, @Param('followingId') followingId: string) {
+    return await this.userService.unFollowUser(req.user['_id'], followingId)
   }
 
-  @Post(':userId/remove-follower/:followerId')
-  async removeFollower(@Param('userId') userId: string, @Param('followerId') followerId: string) {
-    return await this.userService.removeFollower(userId, followerId)
+  @Post('remove-follower/:followerId')
+  async removeFollower(@Req() req: Request, @Param('followerId') followerId: string) {
+    return await this.userService.removeFollower(req.user['_id'], followerId)
+  }
+
+  @Get('connection/user')
+  async getUserConnection(@Req() req: Request) {
+    return await this.userService.getUserConnection(req.user['_id'])
   }
 }

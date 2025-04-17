@@ -15,8 +15,8 @@ export class PostService {
     @Inject(forwardRef(() => UserService)) private readonly userService: UserService,
   ) {}
 
-  async createPost(createPostDto: CreatePostDto) {
-    return await this.postModel.create(createPostDto)
+  async createPost(author: string, createPostDto: CreatePostDto) {
+    return await this.postModel.create({ ...createPostDto, author: author })
   }
 
   async updatePost(id: string, updatePostDto: UpdatePostDto) {
@@ -32,11 +32,24 @@ export class PostService {
   async getPosts(queryDto: QueryDto) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { author, page, limit, sort } = queryDto
-    return await this.postModel.find()
+
+    let sortObject = {}
+    if (sort) {
+      sortObject = JSON.parse(sort)
+    } else {
+      sortObject = { createdAt: -1 }
+    }
+    const authorFilter = author ? { author: author } : {}
+    return await this.postModel
+      .find(authorFilter)
+      .populate('author', 'username avatar')
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ ...sortObject })
   }
 
   async getPost(id: string) {
-    return await this.postModel.findById(id)
+    return await this.postModel.findById(id).populate('author', 'username avatar')
   }
 
   async likePost(postId: string, userId: string) {
@@ -57,7 +70,7 @@ export class PostService {
     if (!post.likes.includes(userId)) {
       throw new BadRequestException('User has not liked this post')
     }
-    post.likes.filter(id => id !== userId)
+    post.likes = post.likes.filter(id => id !== userId)
     return await post.save()
   }
 

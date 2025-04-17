@@ -1,27 +1,31 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { User } from '@entities'
-import { CreateUserDto, UpdateUserDto, QueryDto } from '@dtos/user.dto'
+import { QueryDto } from '@dtos/user.dto'
 
 @Injectable()
 export class UserService {
   constructor(@InjectModel(User.name) private readonly userModel: Model<User>) {}
+
+  async getMe(userId: string) {
+    return await this.userModel.findById(userId).select('_id username email avatar followers followings')
+  }
 
   async getUsers(queryDto: QueryDto) {
     return await this.userModel.find().limit(queryDto.limit).skip(queryDto.page).lean()
   }
 
   async getUser(id: string) {
-    return await this.userModel.findById(id)
+    return await this.userModel.findById(id).select('-password')
   }
 
-  async createUser(createUserDto: CreateUserDto) {
-    return await this.userModel.create(createUserDto)
-  }
-
-  async updateUser(id: string, updateUserDto: UpdateUserDto) {
-    return await this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true })
+  async getUserByUsername(username: string) {
+    const user = await this.userModel.findOne({ username }).select('-password')
+    if (!user) {
+      throw new NotFoundException('User not found')
+    }
+    return user
   }
 
   async deleteUser(id: string) {
@@ -83,5 +87,14 @@ export class UserService {
     } catch (error) {
       throw new BadRequestException('Can not remove follow this user')
     }
+  }
+
+  async getUserConnection(userId: string) {
+    const user = await this.userModel.findById(userId)
+    return await this.userModel
+      .find({
+        _id: { $in: user.followers.concat(user.followings) },
+      })
+      .select('avatar username')
   }
 }
