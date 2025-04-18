@@ -18,7 +18,7 @@ export class RedisService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.redisClient.ping()
-      console.log('Connected to Redis!')
+      console.log('Connected to Redis')
     } catch (error) {
       console.error('Error connecting to Redis:', error)
     }

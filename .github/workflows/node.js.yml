@@ -40,3 +40,6 @@ jobs:
     - name: Build project
       run: npm run build
 
+    - name: Restart project
+      run: pm2 restart backend-capstone
+
