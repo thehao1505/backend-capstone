@@ -13,7 +13,7 @@ import { configs } from '@utils/configs'
 export class User extends BaseEntity {
   @Prop({
     type: String,
-    unique: true,
+    required: true,
   })
   username: string
 
