@@ -46,7 +46,6 @@ export class User extends BaseEntity {
   @Prop({
     type: String,
     required: true,
-    unique: true,
   })
   email: string
 
@@ -108,6 +107,7 @@ export const UserSchema = SchemaFactory.createForClass(User)
 export type UserDocument = User & Document
 
 UserSchema.index({ email: 1 }, { unique: true, background: true })
+UserSchema.index({ username: 1 }, { unique: true, background: true })
 
 UserSchema.pre('save', async function (next) {
   if (this.isModified('password')) {
