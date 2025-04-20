@@ -64,7 +64,7 @@ export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect 
       content: string
     },
   ) {
-    const senderId = client.handshake.query.userId as string
+    const senderId = client.data.userId
 
     const message = await this.messageService.createMessage({
       sender: senderId,
@@ -82,7 +82,7 @@ export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
   private authenticateSocket(client: Socket): Promise<string> {
     try {
-      const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.split(' ')[1] // nếu dùng client gửi bằng auth // nếu gửi qua header
+      const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.split(' ')[1]
 
       if (!token) {
         throw new WsException('Unauthorized: Token not found')
