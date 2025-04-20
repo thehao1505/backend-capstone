@@ -31,5 +31,5 @@ export class GetConversationDto extends Pagination {
   })
   @IsOptional()
   @IsString()
-  userId2: string
+  connectionId: string
 }

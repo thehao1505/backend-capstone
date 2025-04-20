@@ -25,6 +25,13 @@ export class Message extends BaseEntity {
     required: true,
   })
   content: string
+
+  @Prop({
+    type: Boolean,
+    required: true,
+    default: false,
+  })
+  isRead: boolean
 }
 export const MessageSchema = SchemaFactory.createForClass(Message)
 export type MessageDocument = Message & Document

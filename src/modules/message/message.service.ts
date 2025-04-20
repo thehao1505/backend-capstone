@@ -13,12 +13,12 @@ export class MessageService {
   }
 
   async getConversation(userId1: string, getConversationDto: GetConversationDto) {
-    const { userId2, limit, page } = getConversationDto
+    const { connectionId, limit, page } = getConversationDto
     return await this.messageModel
       .find({
         $or: [
-          { sender: userId1, receiver: userId2 },
-          { sender: userId2, receiver: userId1 },
+          { sender: userId1, receiver: connectionId },
+          { sender: connectionId, receiver: userId1 },
         ],
       })
       .sort({ createdAt: 1 })
