@@ -135,13 +135,14 @@ UserSchema.pre('save', function (next) {
 
 UserSchema.pre(['updateOne', 'updateMany', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any
+  console.log(update)
   const query = this.getQuery()
-  const currentUser = await this.model.findById(query?._id)
+  const currentUser = await this.model.findById(query._id)
 
-  if (update.firstName || update.lastName) {
-    const firstName = update.firstName || currentUser?.firstName
-    const lastName = update.lastName || currentUser?.lastName
-    update.fullName = `${firstName ?? ''} ${lastName ?? ''}`.trim()
+  if (update.$set.firstName || update.$set.lastName) {
+    const firstName = update.$set.firstName || currentUser?.firstName
+    const lastName = update.$set.lastName || currentUser?.lastName
+    update.$set.fullName = `${firstName ?? ''} ${lastName ?? ''}`.trim()
   }
 
   next()

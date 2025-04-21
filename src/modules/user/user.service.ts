@@ -29,7 +29,7 @@ export class UserService {
   }
 
   async updateUser(id: string, updateUserDto: UpdateUserDto) {
-    const updatedUser = await this.userModel.findByIdAndUpdate(id, { $set: updateUserDto }, { new: true })
+    const updatedUser = await this.userModel.findOneAndUpdate({ _id: id }, { $set: updateUserDto }, { new: true, runValidators: true })
     if (!updatedUser) {
       throw new NotFoundException('User not found')
     }
