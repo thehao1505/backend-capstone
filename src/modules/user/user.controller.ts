@@ -1,7 +1,7 @@
-import { Controller, Delete, Get, Param, Req, Post, Query, UseGuards } from '@nestjs/common'
+import { Controller, Delete, Get, Param, Req, Post, Query, UseGuards, Patch, Body } from '@nestjs/common'
 import { UserService } from './user.service'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
-import { QueryDto } from '@dtos/user.dto'
+import { QueryDto, UpdateUserDto } from '@dtos/user.dto'
 import { Request } from 'express'
 import { AuthGuard } from '@nestjs/passport'
 
@@ -25,6 +25,11 @@ export class UserController {
   @Get(':id')
   async getUser(@Param('id') id: string) {
     return await this.userService.getUser(id)
+  }
+
+  @Patch(':id')
+  async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(id, updateUserDto)
   }
 
   @Get('username/:username')
