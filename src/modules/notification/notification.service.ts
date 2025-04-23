@@ -4,22 +4,15 @@ import { Model } from 'mongoose'
 import { Notification, NotificationType, NotificationDocument } from '../../entities/notification.entity'
 import { InjectQueue } from '@nestjs/bull'
 import { Queue } from 'bull'
-import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets'
-import { Server } from 'socket.io'
+import { NotificationGateway } from './notification.gateway'
+import { NotificationQueryDto } from '@dtos/notification.dto'
 
 @Injectable()
-@WebSocketGateway({
-  cors: {
-    origin: '*',
-  },
-})
 export class NotificationService {
-  @WebSocketServer()
-  server: Server
-
   constructor(
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
     @InjectQueue('notifications') private notificationQueue: Queue,
   ) {}
 
@@ -31,15 +24,18 @@ export class NotificationService {
     commentId?: string
     metadata?: Record<string, any>
   }) {
-    const notification = await this.notificationModel.create(data)
+    const initNotification = await this.notificationModel.create(data)
+    const notification = await this.notificationModel
+      .findById(initNotification._id)
+      .populate('senderId', 'avatar username followers followings')
+      .populate('postId', 'content likes')
+      .populate('commentId', 'content likes left right postId')
 
-    // Add to queue for processing
     await this.notificationQueue.add('process-notification', {
       notificationId: notification._id,
     })
 
-    // Emit real-time notification
-    this.server.to(data.recipientId).emit('new-notification', notification)
+    this.notificationGateway.sendToUser(data.recipientId, notification)
 
     return notification
   }
@@ -48,9 +44,18 @@ export class NotificationService {
     return this.notificationModel.findByIdAndUpdate(notificationId, { isRead: true }, { new: true })
   }
 
-  async getUserNotifications(userId: string, page = 1, limit = 10) {
+  async getUserNotifications(userId: string, queryDto: NotificationQueryDto) {
+    const { page, limit } = queryDto
     const skip = (page - 1) * limit
-    return this.notificationModel.find({ recipientId: userId }).sort({ createdAt: -1 }).skip(skip).limit(limit).exec()
+    return this.notificationModel
+      .find({ recipientId: userId })
+      .populate('senderId', 'avatar username followers followings')
+      .populate('postId', 'content likes')
+      .populate('commentId', 'content likes left right postId')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec()
   }
 
   async getUnreadCount(userId: string) {

@@ -1,8 +1,9 @@
 import { User, UserSchema } from '@entities'
-import { Module } from '@nestjs/common'
+import { forwardRef, Module } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 import { UserController } from './user.controller'
 import { UserService } from './user.service'
+import { NotificationModule } from '@modules/index'
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { UserService } from './user.service'
         schema: UserSchema,
       },
     ]),
+    forwardRef(() => NotificationModule),
   ],
   controllers: [UserController],
   providers: [UserService],

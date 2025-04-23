@@ -1,12 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
-import { User } from '@entities'
+import { NotificationType, User } from '@entities'
 import { QueryDto, UpdateUserDto } from '@dtos/user.dto'
+import { NotificationService } from '@modules/notification/notification.service'
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private readonly userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @Inject(forwardRef(() => NotificationService)) private readonly notificationService: NotificationService,
+  ) {}
 
   async getMe(userId: string) {
     return await this.userModel.findById(userId).select('_id username email avatar followers followings')
@@ -52,6 +56,11 @@ export class UserService {
       const following = await this.userModel.findById(followingId)
       following.followers.push(userId)
       await Promise.all([user.save(), following.save()])
+      await this.notificationService.createNotification({
+        type: NotificationType.FOLLOW,
+        recipientId: followingId,
+        senderId: userId,
+      })
       return { message: 'Followed successfully' }
     } catch (error) {
       throw new BadRequestException('Can not follow this user')

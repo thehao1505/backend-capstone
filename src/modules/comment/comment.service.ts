@@ -2,8 +2,8 @@ import { BadRequestException, forwardRef, Inject, NotFoundException } from '@nes
 import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
-import { Comment } from '@entities'
-import { PostService } from '@modules/index-service'
+import { Comment, NotificationType } from '@entities'
+import { NotificationService, PostService } from '@modules/index-service'
 import { UserService } from '@modules/index-service'
 import { CreateCommentDto, QueryCommentDto, UpdateCommentDto, DeleteCommentDto } from '@dtos/comment.dto'
 
@@ -13,12 +13,20 @@ export class CommentService {
     @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @Inject(forwardRef(() => UserService)) private readonly userService: UserService,
     @Inject(forwardRef(() => PostService)) private readonly postService: PostService,
+    @Inject(forwardRef(() => NotificationService)) private readonly notificationService: NotificationService,
   ) {}
 
   MAX_DEPTH = 3
 
   async createComment(userId: string, createCommentDto: CreateCommentDto) {
     const { postId, content, parentId } = createCommentDto
+    const post = await this.postService.getPost(postId)
+    const comment = await this.commentModel.create({
+      userId,
+      postId,
+      content,
+      parentId,
+    })
     let right: number, depth: number
     if (parentId) {
       const parentComment = await this.commentModel.findById(parentId)
@@ -47,6 +55,15 @@ export class CommentService {
         },
       )
       depth = parentComment.depth + 1
+
+      if (comment.userId !== post.author['_id']) {
+        await this.notificationService.createNotification({
+          type: NotificationType.COMMENT_REPLY,
+          recipientId: comment.userId,
+          senderId: userId,
+          commentId: comment._id,
+        })
+      }
     } else {
       const maxRightValue = await this.commentModel.findOne(
         {
@@ -58,13 +75,16 @@ export class CommentService {
       if (maxRightValue) right = maxRightValue.right + 1
       else right = 1
       depth = 1
+
+      if (comment.userId !== post.author['_id']) {
+        await this.notificationService.createNotification({
+          type: NotificationType.COMMENT,
+          recipientId: post.author['_id'],
+          senderId: userId,
+          commentId: comment._id,
+        })
+      }
     }
-    const comment = await this.commentModel.create({
-      userId,
-      postId,
-      content,
-      parentId,
-    })
 
     comment.depth = depth
     comment.left = right

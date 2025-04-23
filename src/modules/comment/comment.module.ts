@@ -1,7 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 import { Comment, CommentSchema } from '@entities'
-import { UserModule, PostModule } from '@modules/index'
+import { UserModule, PostModule, NotificationModule } from '@modules/index'
 import { CommentController } from './comment.controller'
 import { CommentService } from '@modules/index-service'
 
@@ -15,6 +15,7 @@ import { CommentService } from '@modules/index-service'
     ]),
     forwardRef(() => UserModule),
     forwardRef(() => PostModule),
+    forwardRef(() => NotificationModule),
   ],
   controllers: [CommentController],
   providers: [CommentService],

@@ -3,9 +3,12 @@ import { AuthGuard } from '@nestjs/passport'
 import { MessageService } from '@modules/index-service'
 import { Request } from 'express'
 import { GetConversationDto } from '@dtos/message.dto'
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 
 @Controller()
+@ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
+@ApiTags('Message')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 

@@ -3,8 +3,7 @@ import { PostController } from './post.controller'
 import { PostService } from '@modules/index-service'
 import { Post, PostSchema } from '@entities'
 import { MongooseModule } from '@nestjs/mongoose'
-import { RedisModule, UserModule } from '@modules/index'
-
+import { RedisModule, UserModule, NotificationModule } from '@modules/index'
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -15,6 +14,7 @@ import { RedisModule, UserModule } from '@modules/index'
     ]),
     forwardRef(() => RedisModule),
     forwardRef(() => UserModule),
+    forwardRef(() => NotificationModule),
   ],
   controllers: [PostController],
   providers: [PostService],
