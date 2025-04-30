@@ -37,6 +37,24 @@ export class Post extends BaseEntity {
     default: false,
   })
   isHidden: boolean
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  isEmbedded: boolean
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  lastEmbeddedAt: Date
+
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  categories: string[]
 }
 export const PostSchema = SchemaFactory.createForClass(Post)
 export type PostDocument = Post & Document

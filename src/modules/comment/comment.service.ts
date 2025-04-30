@@ -18,6 +18,10 @@ export class CommentService {
 
   MAX_DEPTH = 3
 
+  async countCommentsByUserId(userId: string) {
+    return await this.commentModel.countDocuments({ userId })
+  }
+
   async createComment(userId: string, createCommentDto: CreateCommentDto) {
     const { postId, content, parentId } = createCommentDto
     const post = await this.postService.getPost(postId)

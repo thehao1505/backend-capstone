@@ -27,5 +27,14 @@ export const configs = {
   redisPort: process.env.REDIS_PORT,
   redisLikesTtl: process.env.REDIS_LIKES_TTL,
 
+  // Qdrant
+  qdrantUrl: process.env.QDRANT_URL,
+  qdrantApiKey: process.env.QDRANT_API_KEY,
+
+  // Gemini
+  geminiApiKey: process.env.GEMINI_API_KEY,
+  collectionName: process.env.COLLECTION_NAME,
+  vectorSize: process.env.VECTOR_SIZE,
+
   defaultAvatar: process.env.DEFAULT_AVATAR || 'http://res.cloudinary.com/thehao/image/upload/v1742720328/img/zu8ppzlb07gwtweuwpfq.jpg',
 }

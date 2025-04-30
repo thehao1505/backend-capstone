@@ -1,9 +1,10 @@
-import { Body, Controller, Post, Param, Get, Patch, Query, UseGuards, Req } from '@nestjs/common'
+import { Body, Controller, Post, Param, Get, Patch, Query, UseGuards, Req, UseInterceptors } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { PostService } from '@modules/index-service'
 import { CreatePostDto, QueryDto, UpdatePostDto } from '@dtos/post.dto'
 import { Request } from 'express'
 import { AuthGuard } from '@nestjs/passport'
+import { PostEmbeddingInterceptor } from 'src/interceptors/post-embedding.interceptor'
 
 @Controller()
 @ApiBearerAuth()
@@ -13,6 +14,7 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
+  @UseInterceptors(PostEmbeddingInterceptor)
   async createPost(@Req() req: Request, @Body() createPostDto: CreatePostDto) {
     return (await this.postService.createPost(req.user['_id'], createPostDto)).populate('author', 'username avatar')
   }
@@ -28,6 +30,7 @@ export class PostController {
   }
 
   @Patch(':id')
+  @UseInterceptors(PostEmbeddingInterceptor)
   async updatePost(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
     return this.postService.updatePost(id, updatePostDto)
   }
