@@ -41,7 +41,6 @@ export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect 
       const userId = await this.authenticateSocket(client)
 
       this.users.set(userId, client.id)
-      console.log(`✅ Client connected: ${userId}`)
     } catch (error) {
       console.log(`❌ Connection rejected: ${error.message}`)
       client.disconnect()
@@ -52,7 +51,6 @@ export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const userId = Array.from(this.users.entries()).find(([_, socketId]) => socketId === client.id)?.[0]
     if (userId) {
       this.users.delete(userId)
-      console.log(`Client disconnected: ${userId}`)
     }
   }
 

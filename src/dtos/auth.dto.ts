@@ -3,14 +3,14 @@ import { IsString, MinLength, MaxLength, Matches, IsNotEmpty, IsOptional } from 
 
 export class AuthDto {
   @ApiPropertyOptional({
-    example: 'thehao155',
+    example: 'thehao155@gmail.com',
   })
   @IsString()
   @IsOptional()
   email: string
 
   @ApiPropertyOptional({
-    example: 'thehao155@gmail.com',
+    example: 'thehao155',
   })
   @IsString()
   @IsOptional()

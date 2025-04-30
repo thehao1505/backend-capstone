@@ -24,9 +24,6 @@ export class NotificationProcessor {
         throw new Error('Notification not found')
       }
 
-      // Here you can add additional processing logic
-      // For example, sending email notifications, push notifications, etc.
-
       this.logger.debug(`Notification ${notification._id} processed successfully`)
     } catch (error) {
       this.logger.error(`Error processing notification: ${error.message}`)

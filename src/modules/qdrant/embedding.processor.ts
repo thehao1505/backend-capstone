@@ -26,19 +26,15 @@ export class EmbeddingProcessor extends WorkerHost {
     this.logger.log(`Processing embedding for post: ${postId}`)
 
     try {
-      // Fetch post data
       const post = await this.postModel.findById(postId)
       if (!post) {
         throw new Error(`Post not found: ${postId}`)
       }
 
-      // Extract content for embedding
       const contentToEmbed = post.content
 
-      // Generate embedding
       const embedding = await this.embeddingService.generateEmbedding(contentToEmbed)
 
-      // Store in Qdrant
       await this.qdrantService.upsertVector(postId, embedding, {
         postId: postId,
         content: post.content,
@@ -46,7 +42,6 @@ export class EmbeddingProcessor extends WorkerHost {
         createdAt: post.createdAt,
       })
 
-      // Update embedding status in Post document
       await this.postModel.findByIdAndUpdate(postId, {
         $set: {
           isEmbedded: true,

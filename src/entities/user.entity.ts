@@ -135,7 +135,6 @@ UserSchema.pre('save', function (next) {
 
 UserSchema.pre(['updateOne', 'updateMany', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any
-  console.log(update)
   const query = this.getQuery()
   const currentUser = await this.model.findById(query._id)
 
