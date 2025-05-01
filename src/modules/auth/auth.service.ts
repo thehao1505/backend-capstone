@@ -69,7 +69,7 @@ export class AuthService {
 
     const resetToken = crypto.randomBytes(32).toString('hex')
     user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex')
-    user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000)
     await user.save()
 
     try {
