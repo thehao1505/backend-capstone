@@ -16,7 +16,7 @@ export const configs = {
   mailPassword: process.env.MAIL_PASSWORD,
   jwtSecret: process.env.JWT_SECRET,
   url: process.env.URL,
-  nextUrl: process.env.NEXT_APP_URL,
+  nextAppUrl: process.env.NEXT_APP_URL,
 
   // Upload cloudinary
   cloudinaryName: process.env.CLOUDINARY_NAME,
