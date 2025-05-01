@@ -73,7 +73,7 @@ export class AuthService {
     await user.save()
 
     try {
-      const resetUrl = `${configs.url}auth/reset-password/${resetToken}`
+      const resetUrl = `${configs.nextUrl}/reset-password/${resetToken}`
       return await this.mailService.sendMail(email, 'Reset Password', `${resetUrl}`)
     } catch (error) {
       throw new ForbiddenException('Failed to send reset password email!')
