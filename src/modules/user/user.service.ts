@@ -106,11 +106,10 @@ export class UserService {
   }
 
   async getUserConnection(userId: string) {
-    const user = await this.userModel.findById(userId)
-    return await this.userModel
-      .find({
-        _id: { $in: user.followers.concat(user.followings) },
-      })
-      .select('avatar username')
+    const user = await this.userModel.findById(userId).lean()
+
+    const mutualConnectionIds = user.followers.filter(followerId => user.followings.includes(followerId.toString()))
+
+    return await this.userModel.find({ _id: { $in: mutualConnectionIds } }).select('avatar username')
   }
 }
