@@ -42,15 +42,37 @@ export class PostService {
     }
     const authorFilter = author ? { author: author } : {}
     return await this.postModel
-      .find(authorFilter)
+      .find({ isHidden: false, isDeleted: false, ...authorFilter })
       .populate('author', 'username avatar')
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ ...sortObject })
   }
 
-  async getPost(id: string) {
-    return await this.postModel.findById(id).populate('author', 'username avatar')
+  async getPost(userId: string, id: string) {
+    const post = await this.postModel.findById(id).populate('author', 'username avatar')
+    if (!post) throw new NotFoundException('Post not found')
+
+    if (post.isHidden && post.author.toString() !== userId) {
+      throw new BadRequestException('This post is hidden by the author')
+    }
+
+    return post
+  }
+
+  async softDeletePost(id: string) {
+    return await this.postModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true })
+  }
+
+  async hiddenPost(userId: string, id: string) {
+    const post = await this.postModel.findById(id)
+    if (!post) throw new NotFoundException('Post not found')
+
+    if (post.author.toString() !== userId) {
+      throw new BadRequestException('You are not the author of this post')
+    }
+
+    return await this.postModel.findByIdAndUpdate(id, { isHidden: true }, { new: true })
   }
 
   async likePost(postId: string, userId: string) {

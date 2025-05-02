@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Param, Get, Patch, Query, UseGuards, Req, UseInterceptors } from '@nestjs/common'
+import { Body, Controller, Post, Param, Get, Patch, Query, UseGuards, Req, UseInterceptors, Delete } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { PostService } from '@modules/index-service'
 import { CreatePostDto, QueryDto, UpdatePostDto } from '@dtos/post.dto'
@@ -20,8 +20,8 @@ export class PostController {
   }
 
   @Get(':id')
-  async getPost(@Param('id') id: string) {
-    return this.postService.getPost(id)
+  async getPost(@Req() req: Request, @Param('id') id: string) {
+    return this.postService.getPost(req.user['_id'], id)
   }
 
   @Get()
@@ -43,5 +43,15 @@ export class PostController {
   @Post(':id/unLike')
   async unLikePost(@Param('id') id: string, @Req() req: Request) {
     return await this.postService.unLikePost(id, req.user['_id'])
+  }
+
+  @Delete(':id/soft-delete')
+  async softDeletePost(@Param('id') id: string) {
+    return await this.postService.softDeletePost(id)
+  }
+
+  @Delete(':id/hidden')
+  async hiddenPost(@Param('id') id: string, @Req() req: Request) {
+    return await this.postService.hiddenPost(req.user['_id'], id)
   }
 }

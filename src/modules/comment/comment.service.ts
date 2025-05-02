@@ -24,7 +24,7 @@ export class CommentService {
 
   async createComment(userId: string, createCommentDto: CreateCommentDto) {
     const { postId, content, parentId } = createCommentDto
-    const post = await this.postService.getPost(postId)
+    const post = await this.postService.getPost(userId, postId)
     const comment = await this.commentModel.create({
       userId,
       postId,
@@ -150,7 +150,7 @@ export class CommentService {
 
   async deleteComment(userId: string, deleteCommentDto: DeleteCommentDto) {
     const { commentId, postId } = deleteCommentDto
-    const [comment, post] = await Promise.all([this.commentModel.findById(commentId), this.postService.getPost(postId)])
+    const [comment, post] = await Promise.all([this.commentModel.findById(commentId), this.postService.getPost(userId, postId)])
     if (!comment || !post) throw new BadRequestException('Not found comment/post')
 
     if (comment.userId !== userId && post.author !== userId) {
