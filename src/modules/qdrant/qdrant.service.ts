@@ -51,7 +51,7 @@ export class QdrantService implements OnModuleInit {
     })
   }
 
-  async searchSimilar(vector: number[], limit: number = 10, filter?: Record<string, any>) {
+  async searchSimilar(vector: number[], limit: number, filter?: Record<string, any>) {
     return this.client.search(configs.collectionName, {
       vector,
       limit,

@@ -9,9 +9,7 @@ export class PostEmbeddingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       tap(async data => {
-        // Check if this is a post creation response
-        if (data && data._id && data.content) {
-          // Enqueue the post for embedding processing
+        if (data && data._id && (data.content || data.images.length > 0)) {
           await this.recommendationService.enqueuePostForEmbedding(data._id.toString())
         }
       }),

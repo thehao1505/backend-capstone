@@ -1,3 +1,4 @@
+import { QueryRecommendationDto } from '@dtos/recommendation.dto'
 import { User } from '@entities/index'
 import { Post } from '@entities/post.entity'
 import { CommentService, EmbeddingService, QdrantService, RedisService } from '@modules/index-service'
@@ -65,48 +66,94 @@ export class RecommendationService {
 
   // Get content-based recommendations for a new user
   // Uses a random selection of popular posts as the baseline
-  async getRecommendationsForNewUser(userId: string, limit: number = 10) {
-    const popularPosts = await this.postModel.find({ isHidden: false, isDeleted: false }).sort({ 'likes.length': -1 }).limit(20).lean()
+  async getRecommendationsForNewUser(userId: string, query: QueryRecommendationDto) {
+    const { page, limit } = query
+    const skip = (page - 1) * limit
+    const total = await this.postModel.countDocuments({ isHidden: false, isDeleted: false })
+    const popularPosts = await this.postModel
+      .find({ isHidden: false, isDeleted: false })
+      .sort({ 'likes.length': -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
 
-    if (popularPosts.length === 0) return []
+    if (popularPosts.length === 0) {
+      return {
+        items: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      }
+    }
 
     const shuffledPosts = popularPosts.sort(() => 0.5 - Math.random())
-    return shuffledPosts.slice(0, limit)
+    return {
+      items: shuffledPosts,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    }
   }
 
   // Get content-based recommendations for a post
-  async getSimilarPosts(postId: string, limit: number = 10) {
+  async getSimilarPosts(postId: string, query: QueryRecommendationDto) {
+    const { page, limit } = query
     try {
       const post = await this.postModel.findById(postId).lean()
       if (!post) throw new BadRequestException('Post not found')
 
-      // Generate embedding for the query post
       const embedding = await this.embeddingService.generateEmbedding(post.content)
+      if (!embedding || embedding.length === 0) {
+        throw new BadRequestException('Failed to generate embedding for post')
+      }
 
-      // Find similar posts in Qdrant
-      const similar = await this.qdrantService.searchSimilar(embedding, limit + 1, {
+      // Prepare filter
+      const filter = {
         must_not: [
           {
             key: 'postId',
             match: {
-              value: postId,
+              value: postId.toString(),
+              type: 'keyword',
             },
           },
         ],
-      })
+      }
+
+      const similar = await this.qdrantService.searchSimilar(embedding, limit * page, filter)
+      console.log(similar)
 
       const similarPostIds = similar.map(item => item.id).filter(id => id !== postId)
-      const similarPosts = await this.postModel.find({ _id: { $in: similarPostIds }, isHidden: false }).lean()
+      const total = similarPostIds.length
+      const paginatedIds = similarPostIds.slice((page - 1) * limit, page * limit)
 
-      return similarPosts
+      const similarPostsRaw = await this.postModel
+        .find({
+          _id: { $in: paginatedIds },
+          isHidden: false,
+        })
+        .lean()
+
+      const idToPostMap = new Map(similarPostsRaw.map(post => [post._id.toString(), post]))
+      const similarPosts = paginatedIds.map(id => idToPostMap.get(id.toString())).filter(Boolean)
+
+      return {
+        items: similarPosts,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
     } catch (error) {
-      this.logger.error(`Error finding similar posts: ${error.message} `)
-      throw new BadRequestException('Failed to find similar posts')
+      this.logger.error(`Error finding similar posts: ${error.message}`, error.stack)
+      throw new BadRequestException(`Failed to find similar posts: ${error.message}`)
     }
   }
 
-  private async getCachedRecommendations(userId: string, limit: number): Promise<Post[] | null> {
-    const cacheKey = `recommendations:${userId}:${limit}`
+  private async getCachedRecommendations(userId: string, page: number, limit: number) {
+    const cacheKey = `recommendations:${userId}:${page}:${limit}`
     const cached = await this.redisService.client.get(cacheKey)
     if (cached) {
       return JSON.parse(cached)
@@ -114,8 +161,8 @@ export class RecommendationService {
     return null
   }
 
-  private async cacheRecommendations(userId: string, limit: number, recommendations: Post[]) {
-    const cacheKey = `recommendations:${userId}:${limit}`
+  private async cacheRecommendations(userId: string, page: number, limit: number, recommendations: any) {
+    const cacheKey = `recommendations:${userId}:${page}:${limit}`
     await this.redisService.client.setex(cacheKey, this.CACHE_TTL, JSON.stringify(recommendations))
   }
 
@@ -161,14 +208,15 @@ export class RecommendationService {
     return diversePosts
   }
 
-  async getRecommendationsForUser(userId: string, limit: number = 10) {
+  async getRecommendationsForUser(userId: string, query: QueryRecommendationDto) {
+    const { page, limit } = query
     const startTime = Date.now()
     try {
       // Try to get cached recommendations first
-      const cachedRecommendations = await this.getCachedRecommendations(userId, limit)
+      const cachedRecommendations = await this.getCachedRecommendations(userId, page, limit)
       if (cachedRecommendations) {
         await this.trackMetric('cache_hits')
-        await this.trackRecommendationMetrics(userId, cachedRecommendations, 'cache')
+        await this.trackRecommendationMetrics(userId, cachedRecommendations.items, 'cache')
         return cachedRecommendations
       }
       await this.trackMetric('cache_misses')
@@ -179,9 +227,9 @@ export class RecommendationService {
       const postLiked = await this.postModel.countDocuments({ likes: user._id })
       const commented = await this.commentService.countCommentsByUserId(userId)
 
-      if (postLiked === 0 || commented === 0 || !user.followings) {
-        const newUserRecommendations = await this.getRecommendationsForNewUser(userId, limit)
-        await this.trackRecommendationMetrics(userId, newUserRecommendations, 'new_user')
+      if (postLiked === 0 && commented === 0 && !user.followings) {
+        const newUserRecommendations = await this.getRecommendationsForNewUser(userId, query)
+        await this.trackRecommendationMetrics(userId, newUserRecommendations.items, 'new_user')
         return newUserRecommendations
       }
 
@@ -192,8 +240,14 @@ export class RecommendationService {
           isHidden: false,
         })
         .sort({ createdAt: -1 })
-        .limit(20)
+        .skip((page - 1) * limit)
+        .limit(limit)
         .lean()
+
+      const totalFollowingPosts = await this.postModel.countDocuments({
+        author: { $in: user.followings },
+        isHidden: false,
+      })
 
       // Get liked posts
       const likedPosts = await this.postModel
@@ -205,61 +259,77 @@ export class RecommendationService {
         .limit(5)
         .lean()
 
-      let recommendations: Post[] = []
+      let recommendations: any
 
       if (likedPosts.length > 0) {
         const likedContent = likedPosts.map(post => post.content).join(' ')
         const embedding = await this.embeddingService.generateEmbedding(likedContent)
 
-        const similar = await this.qdrantService.searchSimilar(embedding, limit * 2, {
+        const filter = {
           must_not: [
             {
-              key: 'postId',
-              match: {
-                value: { $in: likedPosts.map(post => post._id.toString()) },
-              },
+              should: likedPosts.map(post => ({
+                key: 'postId',
+                match: { value: post._id.toString() },
+              })),
             },
             {
               key: 'author',
-              match: {
-                value: userId,
-              },
+              match: { value: userId },
             },
           ],
-        })
+        }
+
+        const similar = await this.qdrantService.searchSimilar(embedding, limit * page, filter)
+        console.log(similar)
 
         const similarPostIds = similar.map(item => item.id)
-        const similarPosts = await this.postModel.find({ _id: { $in: similarPostIds }, isHidden: false }).lean()
+        const paginatedIds = similarPostIds.slice((page - 1) * limit, page * limit)
+        const similarPosts = await this.postModel.find({ _id: { $in: paginatedIds }, isHidden: false }).lean()
 
         // Combine and score posts
-        const allPosts = [...followingPosts, ...similarPosts]
-        const scoredPosts = allPosts.map(post => ({
+        const scoredPosts = similarPosts.map(post => ({
           ...post,
           score: this.calculateTimeDecayScore(post),
         }))
 
         // Sort by score and get diverse recommendations
         scoredPosts.sort((a, b) => b.score - a.score)
-        recommendations = await this.getDiversePosts(scoredPosts, limit)
+        const diversePosts = await this.getDiversePosts(scoredPosts, limit)
+
+        recommendations = {
+          items: diversePosts,
+          total: similarPostIds.length,
+          page,
+          limit,
+          totalPages: Math.ceil(similarPostIds.length / limit),
+        }
       } else {
-        recommendations = await this.getDiversePosts(followingPosts, limit)
+        console.log('followingPosts', followingPosts)
+        recommendations = {
+          items: await this.getDiversePosts(followingPosts, limit),
+          total: totalFollowingPosts,
+          page,
+          limit,
+          totalPages: Math.ceil(totalFollowingPosts / limit),
+        }
       }
 
       // Cache the recommendations
-      await this.cacheRecommendations(userId, limit, recommendations)
+      await this.cacheRecommendations(userId, page, limit, recommendations)
 
       // Track performance metrics
       const endTime = Date.now()
       await this.trackMetric('processing_time', endTime - startTime)
-      await this.trackRecommendationMetrics(userId, recommendations, 'personalized')
+      await this.trackRecommendationMetrics(userId, recommendations.items, 'personalized')
 
       return recommendations
     } catch (error) {
       this.logger.error(`Error getting recommendations: ${error.message}`)
       await this.trackMetric('errors')
       // Fallback to new user recommendations if there's an error
-      const fallbackRecommendations = await this.getRecommendationsForNewUser(userId, limit)
-      await this.trackRecommendationMetrics(userId, fallbackRecommendations, 'fallback')
+      const fallbackRecommendations = await this.getRecommendationsForNewUser(userId, query)
+      await this.trackRecommendationMetrics(userId, fallbackRecommendations.items, 'fallback')
       return fallbackRecommendations
     }
   }
@@ -275,5 +345,37 @@ export class RecommendationService {
     }
 
     return metrics
+  }
+
+  async getFollowingRecommendations(userId: string, query: QueryRecommendationDto) {
+    const { page, limit } = query
+
+    const user = await this.userModel.findById(userId)
+    if (!user) throw new BadRequestException('User not found')
+
+    const followingPosts = await this.postModel
+      .find({
+        author: { $in: user.followings },
+        isHidden: false,
+      })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean()
+
+    const totalFollowingPosts = await this.postModel.countDocuments({
+      author: { $in: user.followings },
+      isHidden: false,
+    })
+
+    const recommendations = {
+      items: await this.getDiversePosts(followingPosts, limit),
+      total: totalFollowingPosts,
+      page,
+      limit,
+      totalPages: Math.ceil(totalFollowingPosts / limit),
+    }
+
+    return recommendations
   }
 }

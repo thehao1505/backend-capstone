@@ -1,3 +1,4 @@
+import { QueryRecommendationDto } from '@dtos/recommendation.dto'
 import { RecommendationService } from '@modules/index-service'
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
@@ -11,16 +12,22 @@ import { Request } from 'express'
 export class RecommendationController {
   constructor(private readonly recommendationService: RecommendationService) {}
 
-  @Get('feed')
+  @Get('for-your-page')
   @ApiOperation({ summary: 'Get personalized feed recommendations' })
-  async getFeed(@Req() req: Request, @Query('limit') limit = 10) {
-    return this.recommendationService.getRecommendationsForUser(req.user['_id'], Number(limit))
+  async getFeed(@Req() req: Request, @Query() query: QueryRecommendationDto) {
+    return this.recommendationService.getRecommendationsForUser(req.user['_id'], query)
+  }
+
+  @Get('following')
+  @ApiOperation({ summary: 'Get following recommendations' })
+  async getFollowing(@Req() req: Request, @Query() query: QueryRecommendationDto) {
+    return this.recommendationService.getFollowingRecommendations(req.user['_id'], query)
   }
 
   @Get('similar/:postId')
   @ApiOperation({ summary: 'Get similar posts recommendations' })
-  async getSimilarPosts(@Param('postId') postId: string, @Query('limit') limit = 10) {
-    return this.recommendationService.getSimilarPosts(postId, Number(limit))
+  async getSimilarPosts(@Param('postId') postId: string, @Query() query: QueryRecommendationDto) {
+    return this.recommendationService.getSimilarPosts(postId, query)
   }
 
   @Get('metrics')

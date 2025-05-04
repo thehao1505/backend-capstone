@@ -31,29 +31,46 @@ export class EmbeddingProcessor extends WorkerHost {
         throw new Error(`Post not found: ${postId}`)
       }
 
-      const contentToEmbed = post.content
-
-      const embedding = await this.embeddingService.generateEmbedding(contentToEmbed)
-
-      await this.qdrantService.upsertVector(postId, embedding, {
-        postId: postId,
-        content: post.content,
-        author: post.author,
-        createdAt: post.createdAt,
-      })
-
-      await this.postModel.findByIdAndUpdate(postId, {
-        $set: {
-          isEmbedded: true,
-          lastEmbeddedAt: new Date(),
-        },
-      })
+      if (post.content) await this.embedContent(post)
+      if (post.images.length > 0) await this.embedImage(post)
 
       this.logger.log(`Successfully processed embedding for post: ${postId}`)
       return { success: true, postId }
     } catch (error) {
       this.logger.error(`Error processing embedding for post ${postId}: ${error.message}`)
       throw error
+    }
+  }
+
+  private async embedContent(post: Post) {
+    const contentToEmbed = post.content
+
+    const embedding = await this.embeddingService.generateEmbedding(contentToEmbed)
+
+    await this.qdrantService.upsertVector(post._id, embedding, {
+      postId: post._id,
+      content: post.content,
+      author: post.author,
+      createdAt: post.createdAt,
+    })
+
+    this.logger.log(`Embedded content for post: ${post._id}`)
+  }
+
+  private async embedImage(post: Post) {
+    for (const [index, image] of post.images.entries()) {
+      const contentToEmbed = await this.embeddingService.generateImageAnalysis(image)
+
+      const embedding = await this.embeddingService.generateEmbedding(contentToEmbed)
+
+      await this.qdrantService.upsertVector(post._id, embedding, {
+        postId: post._id,
+        content: contentToEmbed,
+        author: post.author,
+        createdAt: post.createdAt,
+      })
+
+      this.logger.log(`Embedded image #${index} for post: ${post._id}`)
     }
   }
 }
