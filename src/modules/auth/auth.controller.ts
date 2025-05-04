@@ -1,7 +1,8 @@
-import { Body, Controller, Post, Patch, Param } from '@nestjs/common'
+import { Body, Controller, Post, Patch, Param, UseInterceptors } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 import { AuthService } from './auth.service'
 import { AuthDto, ChangePasswordDto, ResetPasswordDto, ForgotPasswordDto, RegisterDto } from '@dtos/auth.dto'
+import { UserEmbeddingInterceptor } from 'src/interceptors/user-embedding.interceptor'
 
 @Controller()
 @ApiTags('Auth')
@@ -14,6 +15,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @UseInterceptors(UserEmbeddingInterceptor)
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto)
   }

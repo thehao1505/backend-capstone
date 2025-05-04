@@ -3,7 +3,7 @@ import { forwardRef, Module } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 import { UserController } from './user.controller'
 import { UserService } from './user.service'
-import { NotificationModule } from '@modules/index'
+import { NotificationModule, QdrantModule, RedisModule } from '@modules/index'
 
 @Module({
   imports: [
@@ -13,6 +13,8 @@ import { NotificationModule } from '@modules/index'
         schema: UserSchema,
       },
     ]),
+    forwardRef(() => RedisModule),
+    forwardRef(() => QdrantModule),
     forwardRef(() => NotificationModule),
   ],
   controllers: [UserController],

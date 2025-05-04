@@ -5,7 +5,7 @@ import { AuthController } from './auth.controller'
 import { AuthService } from '@modules/index-service'
 import { JwtModule } from '@nestjs/jwt'
 import { JwtStrategy } from '../../strategy'
-import { MailModule } from '@modules/index'
+import { MailModule, UserModule } from '@modules/index'
 
 @Module({
   imports: [
@@ -17,6 +17,7 @@ import { MailModule } from '@modules/index'
       },
     ]),
     forwardRef(() => MailModule),
+    forwardRef(() => UserModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

@@ -1,16 +1,37 @@
-import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, forwardRef, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { NotificationType, User } from '@entities'
-import { QueryDto, UpdateUserDto } from '@dtos/user.dto'
+import { QueryDto, QuerySearchDto, UpdateUserDto } from '@dtos/user.dto'
 import { NotificationService } from '@modules/notification/notification.service'
+import { InjectQueue } from '@nestjs/bullmq'
+import { Queue } from 'bullmq'
+import { Cron, CronExpression } from '@nestjs/schedule'
+import { configs } from '@utils/configs'
+import { EmbeddingService, QdrantService } from '@modules/index-service'
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name)
+
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectQueue('embedding') private readonly embeddingQueue: Queue,
+    @Inject(forwardRef(() => QdrantService)) private readonly qdrantService: QdrantService,
+    @Inject(forwardRef(() => EmbeddingService)) private readonly embeddingService: EmbeddingService,
     @Inject(forwardRef(() => NotificationService)) private readonly notificationService: NotificationService,
   ) {}
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleEnqueueUserForEmbedding() {
+    const users = await this.userModel
+      .find({ isEmbedded: { $ne: true } })
+      .limit(100)
+      .lean()
+    for (const user of users) {
+      await this.enqueueUserForEmbedding(user._id.toString())
+    }
+  }
 
   async getMe(userId: string) {
     return await this.userModel.findById(userId).select('_id username email avatar followers followings')
@@ -37,6 +58,7 @@ export class UserService {
     if (!updatedUser) {
       throw new NotFoundException('User not found')
     }
+    return updatedUser
   }
 
   async deleteUser(id: string) {
@@ -111,5 +133,44 @@ export class UserService {
     const mutualConnectionIds = user.followers.filter(followerId => user.followings.includes(followerId.toString()))
 
     return await this.userModel.find({ _id: { $in: mutualConnectionIds } }).select('avatar username')
+  }
+
+  async searchUsers(query: QuerySearchDto) {
+    const { page, limit } = query
+    const { text } = query
+
+    const embedding = await this.embeddingService.generateEmbedding(text)
+    const similar = await this.qdrantService.searchSimilar(configs.userCollectionName, embedding, Number(limit), Number(page), {})
+
+    console.log(similar)
+    const similarUserIds = similar.map(item => item.id)
+    const similarUsersRaw = await this.userModel
+      .find({
+        _id: { $in: similarUserIds },
+      })
+      .select('avatar username')
+      .lean()
+
+    console.log(similarUsersRaw)
+
+    const idToUserMap = new Map(similarUsersRaw.map(user => [user._id.toString(), user]))
+    const similarUsers = similarUserIds.map(id => idToUserMap.get(id.toString())).filter(Boolean)
+
+    return similarUsers
+  }
+
+  async enqueueUserForEmbedding(userId: string) {
+    await this.embeddingQueue.add(
+      'process-user-embedding',
+      { userId },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
+    )
+    this.logger.log(`Enqueued user ${userId} for embedding`)
   }
 }

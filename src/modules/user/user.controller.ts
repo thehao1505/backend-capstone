@@ -1,9 +1,10 @@
-import { Controller, Delete, Get, Param, Req, Post, Query, UseGuards, Patch, Body } from '@nestjs/common'
+import { Controller, Delete, Get, Param, Req, Post, Query, UseGuards, Patch, Body, UseInterceptors } from '@nestjs/common'
 import { UserService } from './user.service'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
-import { QueryDto, UpdateUserDto } from '@dtos/user.dto'
+import { QueryDto, QuerySearchDto, UpdateUserDto } from '@dtos/user.dto'
 import { Request } from 'express'
 import { AuthGuard } from '@nestjs/passport'
+import { UserEmbeddingInterceptor } from 'src/interceptors/user-embedding.interceptor'
 
 @Controller()
 @ApiBearerAuth()
@@ -28,6 +29,7 @@ export class UserController {
   }
 
   @Patch(':id')
+  @UseInterceptors(UserEmbeddingInterceptor)
   async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return await this.userService.updateUser(id, updateUserDto)
   }
@@ -60,5 +62,10 @@ export class UserController {
   @Get('connection/user')
   async getUserConnection(@Req() req: Request) {
     return await this.userService.getUserConnection(req.user['_id'])
+  }
+
+  @Get('search/users')
+  async searchUsers(@Query() query: QuerySearchDto) {
+    return await this.userService.searchUsers(query)
   }
 }

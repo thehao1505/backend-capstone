@@ -1,10 +1,11 @@
-import { QueryRecommendationDto } from '@dtos/recommendation.dto'
+import { QueryRecommendationDto, QuerySearchDto } from '@dtos/recommendation.dto'
 import { User } from '@entities/index'
 import { Post } from '@entities/post.entity'
 import { CommentService, EmbeddingService, QdrantService, RedisService } from '@modules/index-service'
 import { InjectQueue } from '@nestjs/bullmq'
 import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
+import { configs } from '@utils/configs/config'
 import { Queue } from 'bullmq'
 import { Model } from 'mongoose'
 
@@ -122,22 +123,21 @@ export class RecommendationService {
         ],
       }
 
-      const similar = await this.qdrantService.searchSimilar(embedding, limit * page, filter)
+      const similar = await this.qdrantService.searchSimilar(configs.postCollectionName, embedding, Number(limit), Number(page), filter)
       console.log(similar)
 
       const similarPostIds = similar.map(item => item.id).filter(id => id !== postId)
       const total = similarPostIds.length
-      const paginatedIds = similarPostIds.slice((page - 1) * limit, page * limit)
 
       const similarPostsRaw = await this.postModel
         .find({
-          _id: { $in: paginatedIds },
+          _id: { $in: similarPostIds },
           isHidden: false,
         })
         .lean()
 
       const idToPostMap = new Map(similarPostsRaw.map(post => [post._id.toString(), post]))
-      const similarPosts = paginatedIds.map(id => idToPostMap.get(id.toString())).filter(Boolean)
+      const similarPosts = similarPostIds.map(id => idToPostMap.get(id.toString())).filter(Boolean)
 
       return {
         items: similarPosts,
@@ -280,12 +280,11 @@ export class RecommendationService {
           ],
         }
 
-        const similar = await this.qdrantService.searchSimilar(embedding, limit * page, filter)
+        const similar = await this.qdrantService.searchSimilar(configs.postCollectionName, embedding, Number(limit), Number(page), filter)
         console.log(similar)
 
         const similarPostIds = similar.map(item => item.id)
-        const paginatedIds = similarPostIds.slice((page - 1) * limit, page * limit)
-        const similarPosts = await this.postModel.find({ _id: { $in: paginatedIds }, isHidden: false }).lean()
+        const similarPosts = await this.postModel.find({ _id: { $in: similarPostIds }, isHidden: false }).lean()
 
         // Combine and score posts
         const scoredPosts = similarPosts.map(post => ({
@@ -377,5 +376,15 @@ export class RecommendationService {
     }
 
     return recommendations
+  }
+
+  async search(query: QuerySearchDto) {
+    const { page, limit } = query
+    const { text } = query
+
+    const embedding = await this.embeddingService.generateEmbedding(text)
+    const similar = await this.qdrantService.searchSimilar(configs.postCollectionName, embedding, Number(limit), Number(page), {})
+
+    return similar
   }
 }

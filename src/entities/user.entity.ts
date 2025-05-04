@@ -102,12 +102,40 @@ export class User extends BaseEntity {
     default: null,
   })
   shortDescription: string
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  isEmbedded: boolean
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  lastEmbeddedAt: Date
 }
 export const UserSchema = SchemaFactory.createForClass(User)
 export type UserDocument = User & Document
 
 UserSchema.index({ email: 1 }, { unique: true, background: true })
 UserSchema.index({ username: 1 }, { unique: true, background: true })
+
+UserSchema.index(
+  {
+    username: 'text',
+    fullName: 'text',
+    shortDescription: 'text',
+  },
+  {
+    weights: {
+      username: 10,
+      fullName: 5,
+      shortDescription: 1,
+    },
+    name: 'UserTextIndex',
+  },
+)
 
 UserSchema.pre('save', async function (next) {
   if (this.isModified('password')) {

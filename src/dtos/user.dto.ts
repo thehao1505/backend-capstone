@@ -1,6 +1,7 @@
-import { ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator'
+import { Pagination } from './base.dto'
 
 export class QueryDto {
   @ApiPropertyOptional({
@@ -64,4 +65,12 @@ export class UpdateUserDto {
   @IsNotEmpty()
   @IsString()
   avatar: string
+}
+
+export class QuerySearchDto extends Pagination {
+  @ApiProperty({
+    example: 'Some content to search',
+  })
+  @IsString()
+  text: string
 }

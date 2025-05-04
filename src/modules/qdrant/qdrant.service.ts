@@ -19,19 +19,31 @@ export class QdrantService implements OnModuleInit {
     try {
       // Check if collection exists
       const collections = await this.client.getCollections()
-      const collectionExists = collections.collections.some(collection => collection.name === configs.collectionName)
+      const postCollectionExists = collections.collections.some(collection => collection.name === configs.postCollectionName)
+      const userCollectionExists = collections.collections.some(collection => collection.name === configs.userCollectionName)
 
-      if (!collectionExists) {
-        // Create collection if it doesn't exist
-        await this.client.createCollection(configs.collectionName, {
+      if (!postCollectionExists) {
+        await this.client.createCollection(configs.postCollectionName, {
           vectors: {
             size: Number(configs.vectorSize),
             distance: 'Cosine',
           },
         })
-        this.logger.log(`Collection ${configs.collectionName} created`)
+        this.logger.log(`Collection ${configs.postCollectionName} created`)
       } else {
-        this.logger.log(`Collection ${configs.collectionName} already exists`)
+        this.logger.log(`Collection ${configs.postCollectionName} already exists`)
+      }
+
+      if (!userCollectionExists) {
+        await this.client.createCollection(configs.userCollectionName, {
+          vectors: {
+            size: Number(configs.vectorSize),
+            distance: 'Cosine',
+          },
+        })
+        this.logger.log(`Collection ${configs.userCollectionName} created`)
+      } else {
+        this.logger.log(`Collection ${configs.userCollectionName} already exists`)
       }
     } catch (error) {
       this.logger.error(`Failed to initialize Qdrant collection: ${error.message}`)
@@ -39,8 +51,8 @@ export class QdrantService implements OnModuleInit {
     }
   }
 
-  async upsertVector(id: string, vector: number[], payload: Record<string, any>) {
-    return this.client.upsert(configs.collectionName, {
+  async upsertVector(collectionName: string, id: string, vector: number[], payload: Record<string, any>) {
+    return this.client.upsert(collectionName, {
       points: [
         {
           id,
@@ -51,16 +63,19 @@ export class QdrantService implements OnModuleInit {
     })
   }
 
-  async searchSimilar(vector: number[], limit: number, filter?: Record<string, any>) {
-    return this.client.search(configs.collectionName, {
+  async searchSimilar(collectionName: string, vector: number[], limit: number, page: number, filter: Record<string, any>) {
+    const offset = (page - 1) * limit
+
+    return this.client.search(collectionName, {
       vector,
       limit,
+      offset,
       filter,
     })
   }
 
-  async deleteVector(id: string) {
-    return this.client.delete(configs.collectionName, {
+  async deleteVector(id: string, collectionName: string) {
+    return this.client.delete(collectionName, {
       points: [id],
     })
   }

@@ -1,4 +1,4 @@
-import { QueryRecommendationDto } from '@dtos/recommendation.dto'
+import { QueryRecommendationDto, QuerySearchDto } from '@dtos/recommendation.dto'
 import { RecommendationService } from '@modules/index-service'
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
@@ -34,5 +34,11 @@ export class RecommendationController {
   @ApiOperation({ summary: 'Get recommendation system metrics' })
   async getMetrics() {
     return this.recommendationService.getRecommendationMetrics()
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Get recommendation system metrics' })
+  async search(@Query() query: QuerySearchDto) {
+    return this.recommendationService.search(query)
   }
 }

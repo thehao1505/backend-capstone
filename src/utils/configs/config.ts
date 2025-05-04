@@ -34,7 +34,8 @@ export const configs = {
 
   // Gemini
   geminiApiKey: process.env.GEMINI_API_KEY,
-  collectionName: process.env.COLLECTION_NAME,
+  postCollectionName: process.env.POST_COLLECTION_NAME,
+  userCollectionName: process.env.USER_COLLECTION_NAME,
   vectorSize: process.env.VECTOR_SIZE,
 
   defaultAvatar: process.env.DEFAULT_AVATAR || 'http://res.cloudinary.com/thehao/image/upload/v1742720328/img/zu8ppzlb07gwtweuwpfq.jpg',
