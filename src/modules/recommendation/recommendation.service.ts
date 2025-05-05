@@ -125,7 +125,7 @@ export class RecommendationService {
       }
 
       const similar = await this.qdrantService.searchSimilar(configs.postCollectionName, embedding, Number(limit), Number(page), filter)
-      console.log(similar)
+      this.logger.log(`[getSimilarPosts] Similar posts: ${similar}`)
 
       const similarPostIds = similar.map(item => item.id).filter(id => id !== postId)
       const total = similarPostIds.length
@@ -282,7 +282,7 @@ export class RecommendationService {
         }
 
         const similar = await this.qdrantService.searchSimilar(configs.postCollectionName, embedding, Number(limit), Number(page), filter)
-        console.log(similar)
+        this.logger.log(`[getRecommendationsForUser] Similar posts: ${similar}`)
 
         const similarPostIds = similar.map(item => item.id)
         const similarPosts = await this.postModel.find({ _id: { $in: similarPostIds }, isHidden: false }).lean()
@@ -305,7 +305,6 @@ export class RecommendationService {
           totalPages: Math.ceil(similarPostIds.length / limit),
         }
       } else {
-        console.log('followingPosts', followingPosts)
         recommendations = {
           items: await this.getDiversePosts(followingPosts, limit),
           total: totalFollowingPosts,

@@ -142,7 +142,7 @@ export class UserService {
     const embedding = await this.embeddingService.generateEmbedding(text)
     const similar = await this.qdrantService.searchSimilar(configs.userCollectionName, embedding, Number(limit), Number(page), {})
 
-    console.log(similar)
+    this.logger.log(`Similar users: ${similar}`)
     const similarUserIds = similar.map(item => item.id)
     const similarUsersRaw = await this.userModel
       .find({
@@ -150,8 +150,6 @@ export class UserService {
       })
       .select('avatar username fullName')
       .lean()
-
-    console.log(similarUsersRaw)
 
     const idToUserMap = new Map(similarUsersRaw.map(user => [user._id.toString(), user]))
     const similarUsers = similarUserIds.map(id => idToUserMap.get(id.toString())).filter(Boolean)

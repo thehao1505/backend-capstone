@@ -9,7 +9,6 @@ export class PostEmbeddingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       tap(async data => {
-        console.log(data)
         if (data && data._id && (data.content || data.images.length > 0)) {
           await this.recommendationService.enqueuePostForEmbedding(data._id.toString())
         }
