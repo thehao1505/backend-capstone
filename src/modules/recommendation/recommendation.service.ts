@@ -5,6 +5,7 @@ import { CommentService, EmbeddingService, QdrantService, RedisService } from '@
 import { InjectQueue } from '@nestjs/bullmq'
 import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
+import { Cron, CronExpression } from '@nestjs/schedule'
 import { configs } from '@utils/configs/config'
 import { Queue } from 'bullmq'
 import { Model } from 'mongoose'
@@ -391,11 +392,23 @@ export class RecommendationService {
         _id: { $in: similarPostIds },
         isHidden: false,
       })
+      .populate('author', 'username avatar fullName')
       .lean()
 
     const idToPostMap = new Map(similarPostsRaw.map(post => [post._id.toString(), post]))
     const similarPosts = similarPostIds.map(id => idToPostMap.get(id.toString())).filter(Boolean)
 
     return similarPosts
+  }
+
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async handleEnqueuePostForEmbedding() {
+    const posts = await this.postModel
+      .find({ isEmbedded: { $ne: true } })
+      .limit(100)
+      .lean()
+    for (const post of posts) {
+      await this.enqueuePostForEmbedding(post._id.toString())
+    }
   }
 }
