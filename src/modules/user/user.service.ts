@@ -22,7 +22,7 @@ export class UserService {
     @Inject(forwardRef(() => NotificationService)) private readonly notificationService: NotificationService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handleEnqueueUserForEmbedding() {
     const users = await this.userModel
       .find({ isEmbedded: { $ne: true } })

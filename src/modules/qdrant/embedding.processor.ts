@@ -34,8 +34,7 @@ export class EmbeddingProcessor extends WorkerHost {
           throw new Error(`Post not found: ${postId}`)
         }
 
-        if (post.content) await this.embedContent(post)
-        if (post.images.length > 0) await this.embedImage(post)
+        await this.embedPost(post)
 
         await this.postModel.findByIdAndUpdate(postId, {
           $set: {
@@ -62,7 +61,7 @@ export class EmbeddingProcessor extends WorkerHost {
           throw new Error(`User not found: ${userId}`)
         }
 
-        if (user.fullName) await this.embedUser(user)
+        await this.embedUser(user)
 
         await this.userModel.findByIdAndUpdate(
           user._id,
@@ -100,44 +99,24 @@ export class EmbeddingProcessor extends WorkerHost {
     }
   }
 
-  private async embedContent(post: Post) {
+  private async embedPost(post: Post) {
     try {
-      const contentToEmbed = post.content
+      const imagesDescription = post.images.map(image => this.embeddingService.generateImageAnalysis(image))
+
+      const contentToEmbed = `${post.content} ${imagesDescription.join(' ')}`
 
       const embedding = await this.embeddingService.generateEmbedding(contentToEmbed)
 
       await this.qdrantService.upsertVector(configs.postCollectionName, post._id, embedding, {
         postId: post._id,
-        content: post.content,
+        content: contentToEmbed,
         author: post.author,
         createdAt: post.createdAt,
       })
 
       this.logger.log(`Embedded content for post: ${post._id}`)
     } catch (error) {
-      this.logger.error(`Error embedding content for post ${post._id}: ${error.message}`)
-      throw error
-    }
-  }
-
-  private async embedImage(post: Post) {
-    try {
-      for (const [index, image] of post.images.entries()) {
-        const contentToEmbed = await this.embeddingService.generateImageAnalysis(image)
-
-        const embedding = await this.embeddingService.generateEmbedding(contentToEmbed)
-
-        await this.qdrantService.upsertVector(configs.postCollectionName, post._id, embedding, {
-          postId: post._id,
-          content: contentToEmbed,
-          author: post.author,
-          createdAt: post.createdAt,
-        })
-
-        this.logger.log(`Embedded image #${index} for post: ${post._id}`)
-      }
-    } catch (error) {
-      this.logger.error(`Error embedding image for post ${post._id}: ${error.message}`)
+      this.logger.error(`Error embedding post ${post._id}: ${error.message}`)
       throw error
     }
   }

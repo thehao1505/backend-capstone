@@ -385,6 +385,17 @@ export class RecommendationService {
     const embedding = await this.embeddingService.generateEmbedding(text)
     const similar = await this.qdrantService.searchSimilar(configs.postCollectionName, embedding, Number(limit), Number(page), {})
 
-    return similar
+    const similarPostIds = similar.map(item => item.id)
+    const similarPostsRaw = await this.postModel
+      .find({
+        _id: { $in: similarPostIds },
+        isHidden: false,
+      })
+      .lean()
+
+    const idToPostMap = new Map(similarPostsRaw.map(post => [post._id.toString(), post]))
+    const similarPosts = similarPostIds.map(id => idToPostMap.get(id.toString())).filter(Boolean)
+
+    return similarPosts
   }
 }
