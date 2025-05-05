@@ -148,7 +148,7 @@ export class UserService {
       .find({
         _id: { $in: similarUserIds },
       })
-      .select('avatar username')
+      .select('avatar username fullName')
       .lean()
 
     console.log(similarUsersRaw)
