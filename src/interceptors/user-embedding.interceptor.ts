@@ -10,9 +10,8 @@ export class UserEmbeddingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       tap(async data => {
-        this.logger.log(`Preparing data to enqueue for embeddings: ${data}`)
-        if (data && data._id) {
-          await this.userService.enqueueUserForEmbedding(data._id.toString())
+        if (data && (data._id || data.user._id)) {
+          await this.userService.enqueueUserForEmbedding(data._id?.toString() || data.user._id.toString())
         }
       }),
     )
