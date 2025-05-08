@@ -142,7 +142,6 @@ export class UserService {
     const embedding = await this.embeddingService.generateEmbedding(text)
     const similar = await this.qdrantService.searchSimilar(configs.userCollectionName, embedding, Number(limit), Number(page), {})
 
-    this.logger.log(`Similar users: ${similar}`)
     const similarUserIds = similar.map(item => item.id)
     const similarUsersRaw = await this.userModel
       .find({
